@@ -1,4 +1,4 @@
-import React, { useEffect, useState, PropsWithChildren } from 'react';
+import React, { useEffect, useState, PropsWithChildren, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase, getSafeSession } from './lib/supabaseClient';
 import { faceAuthService } from './lib/faceAuth';
@@ -51,7 +51,8 @@ const Splash = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-const ProtectedRoute = ({ children, user }: PropsWithChildren<{ user: UserProfile | null }>) => {
+const ProtectedRoute = ({ children, user, loading }: PropsWithChildren<{ user: UserProfile | null, loading: boolean }>) => {
+  if (loading) return null; // 正在检查 Session 时不渲染任何内容，防止闪现登录页
   if (!user) return <Navigate to="/login" replace />;
   return <Layout user={user}>{children}</Layout>;
 };
@@ -61,31 +62,52 @@ const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [user, setUser] = useState<UserProfile | null>(null);
 
+  const fetchProfile = useCallback(async (userId: string, email?: string) => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (data) {
+        setUser(data as UserProfile);
+      } else {
+        // 如果 profiles 表里还没这个用户，创建一个临时对象
+        setUser({ 
+          id: userId, 
+          username: email?.split('@')[0] || 'User', 
+          role_level: '05' 
+        });
+      }
+    } catch (err) {
+      console.warn("Fetch profile failed, using fallback user info.");
+      setUser({ id: userId, username: email?.split('@')[0] || 'User', role_level: '05' });
+    }
+  }, []);
+
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { session } = await getSafeSession();
-        if (session?.user) {
-           const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-           if (data) {
-             setUser(data as UserProfile);
-           } else {
-             setUser({ 
-               id: session.user.id, 
-               username: session.user.email?.split('@')[0] || 'User', 
-               role_level: '05' 
-             });
-           }
-        }
-      } catch (err) {
-        console.error("Critical auth error:", err);
-      } finally {
+    // 1. 初始 Session 检查
+    const checkInitialSession = async () => {
+      const { session } = await getSafeSession();
+      if (session?.user) {
+        await fetchProfile(session.user.id, session.user.email);
+      }
+      setLoading(false);
+    };
+
+    checkInitialSession();
+
+    // 2. 监听 Auth 状态变化 (关键：处理登录成功后的自动跳转)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await fetchProfile(session.user.id, session.user.email);
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
         setLoading(false);
       }
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    checkSession();
-  }, []);
+  }, [fetchProfile]);
 
   if (showSplash) {
     return <Splash onComplete={() => setShowSplash(false)} />;
@@ -94,22 +116,24 @@ const AppContent = () => {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={<Login onDemoLogin={(u) => setUser(u)} />} />
+        <Route path="/login" element={
+          user ? <Navigate to="/" replace /> : <Login onDemoLogin={(u) => setUser(u)} />
+        } />
         
         <Route path="/" element={
-          <ProtectedRoute user={user}>
+          <ProtectedRoute user={user} loading={loading}>
             <Dashboard />
           </ProtectedRoute>
         } />
         
         <Route path="/inventory" element={
-          <ProtectedRoute user={user}>
+          <ProtectedRoute user={user} loading={loading}>
             <Inventory />
           </ProtectedRoute>
         } />
 
         <Route path="/logs" element={
-          <ProtectedRoute user={user}>
+          <ProtectedRoute user={user} loading={loading}>
             <Logs />
           </ProtectedRoute>
         } />

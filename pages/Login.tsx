@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { GlassCard, Button, Input } from '../components/ui/GlassComponents';
-import { Lock, ScanFace, User, Info, AlertTriangle } from 'lucide-react';
+import { Lock, ScanFace, User, Info, AlertTriangle, Loader2 } from 'lucide-react';
 import { faceAuthService } from '../lib/faceAuth';
 import { cn } from '../lib/utils';
 import { UserProfile } from '../types';
@@ -45,27 +45,33 @@ const Login: React.FC<LoginProps> = ({ onDemoLogin }) => {
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    
     setLoading(true);
     setError(null);
+    
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password: password 
+      });
       
       if (authError) {
         if (authError.message === 'Invalid login credentials') {
-          setError('账号或密码错误。如果是首次使用，请先在 Supabase 注册该用户并运行角色提升 SQL。');
+          setError('账号或密码错误。请确认已在 Supabase 注册该用户。');
         } else {
-          throw authError;
+          setError(`登录失败: ${authError.message}`);
         }
+        setLoading(false); // 只有出错才设为 false，成功后 App.tsx 会处理跳转
         return;
       }
       
-      if (data.user) {
-        navigate('/');
-      }
+      // 成功后不在此处 navigate，交给 App.tsx 的 onAuthStateChange 监听
+      console.log("Login successful for:", data.user?.email);
+      
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || '无法连接至服务器，请检查网络或 Supabase 配置。');
-    } finally {
+      console.error("Login catch:", err);
+      setError('连接服务时发生异常，请检查网络环境。');
       setLoading(false);
     }
   };
@@ -80,7 +86,6 @@ const Login: React.FC<LoginProps> = ({ onDemoLogin }) => {
       enterDemoMode();
     } catch (err: any) {
       setError(err.message || '面部识别失败');
-    } finally {
       setLoading(false);
     }
   };
@@ -119,21 +124,22 @@ const Login: React.FC<LoginProps> = ({ onDemoLogin }) => {
              {error && (
                <div className="text-xs p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600 flex flex-col gap-2">
                  <div className="flex gap-2 items-center font-bold">
-                   <AlertTriangle size={14} /> 登录受阻
+                   <AlertTriangle size={14} /> 验证失败
                  </div>
                  <p>{error}</p>
                </div>
              )}
 
-             <Button type="submit" className="w-full h-12" isLoading={loading}>安全进入</Button>
+             <Button type="submit" className="w-full h-12" isLoading={loading}>
+               {loading ? "正在验证..." : "安全进入"}
+             </Button>
              
              <div className="mt-4 p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
                 <p className="text-[10px] text-blue-600 leading-relaxed">
                   <strong>初始配置提示：</strong><br/>
-                  1. 请在 Supabase 控制台手动创建一个用户。<br/>
-                  2. 建议账号: <code>admin@prism.com</code><br/>
-                  3. 建议密码: <code>ss631204</code><br/>
-                  4. 运行角色提升 SQL 将其设为 Lvl.00。
+                  1. 账号建议: <code>admin@prism.com</code><br/>
+                  2. 密码建议: <code>ss631204</code><br/>
+                  3. 确保已经在控制台 Authentication 设置中添加了此用户。
                 </p>
              </div>
 
