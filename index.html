@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Prism StockWise</title>
+    <link rel="manifest" href="/manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: ['class', '[data-theme="dark"]'],
+        theme: {
+          extend: {
+            colors: {
+              primary: 'var(--color-bg-primary)',
+              text: 'var(--color-text-primary)',
+              accent: 'var(--color-accent)',
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      /* Physical Metaphor - Smooth scrolling & Glass defaults */
+      :root {
+        --color-bg-primary: #F2F3F7;
+        --color-text-primary: #3C3836;
+        --color-accent: #076678;
+        --glass-opacity: 0.6;
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --card-surface: rgba(255, 255, 255, 0.4);
+        --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+
+      [data-theme='dark'] {
+        --color-bg-primary: #1D2021;
+        --color-text-primary: #EBDBB2;
+        --color-accent: #D65D0E;
+        --glass-opacity: 0.8;
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --card-surface: rgba(30, 30, 30, 0.6);
+        --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      }
+      
+      [data-theme='solarized'] {
+        --color-bg-primary: #FDF6E3;
+        --color-text-primary: #3C3836;
+        --color-accent: #B58900;
+        --glass-opacity: 0.6;
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --card-surface: rgba(255, 255, 255, 0.4);
+      }
+
+      body {
+        background-color: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        overflow-x: hidden;
+      }
+
+      /* Glass Utility Class */
+      .glass {
+        background: var(--card-surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-soft);
+      }
+      
+      .glass-high-contrast {
+         background: rgba(255, 255, 255, 0.8);
+      }
+      [data-theme='dark'] .glass-high-contrast {
+         background: rgba(0, 0, 0, 0.8);
+      }
+
+      /* Custom Scrollbar for Webkit */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(100, 100, 100, 0.2);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(100, 100, 100, 0.4);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "clsx": "https://esm.sh/clsx@^2.1.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.88.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.0",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "Prism StockWise",
+  "description": "A glassmorphic, intelligent inventory management system with biological authentication and time-travel recovery.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
