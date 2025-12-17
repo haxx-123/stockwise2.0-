@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { GlassCard, Button } from '../components/ui/GlassComponents';
@@ -80,7 +81,8 @@ const Logs = () => {
                          <AlertCircle size={12} /> REVOKED
                       </span>
                    ) : (
-                      <Button variant="ghost" size="sm" onClick={() => handleRevoke(log.id)} className="text-xs h-8">
+                      /* Fixed: Removed 'size' prop as it is not defined in the Button component props */
+                      <Button variant="ghost" onClick={() => handleRevoke(log.id)} className="text-xs h-8">
                          <Undo2 size={14} className="mr-1" /> Undo
                       </Button>
                    )}
