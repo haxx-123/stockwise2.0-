@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { GlassCard, Button, Input } from '../components/ui/GlassComponents';
-import { Lock, ScanFace, User, Info } from 'lucide-react';
+import { Lock, ScanFace, User, Info, AlertTriangle } from 'lucide-react';
 import { faceAuthService } from '../lib/faceAuth';
 import { cn } from '../lib/utils';
 import { UserProfile } from '../types';
@@ -48,11 +48,23 @@ const Login: React.FC<LoginProps> = ({ onDemoLogin }) => {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      navigate('/');
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (authError) {
+        if (authError.message === 'Invalid login credentials') {
+          setError('账号或密码错误。如果是首次使用，请先在 Supabase 注册该用户并运行角色提升 SQL。');
+        } else {
+          throw authError;
+        }
+        return;
+      }
+      
+      if (data.user) {
+        navigate('/');
+      }
     } catch (err: any) {
-      setError('无法连接至服务器，请检查数据库配置。');
+      console.error(err);
+      setError(err.message || '无法连接至服务器，请检查网络或 Supabase 配置。');
     } finally {
       setLoading(false);
     }
@@ -97,27 +109,41 @@ const Login: React.FC<LoginProps> = ({ onDemoLogin }) => {
           <form onSubmit={handlePasswordLogin} className="w-full space-y-4">
              <div className="relative">
                <User className="absolute left-3 top-3.5 w-5 h-5 opacity-30" />
-               <Input type="email" placeholder="邮箱" className="pl-10" value={email} onChange={e => setEmail(e.target.value)} required />
+               <Input type="email" placeholder="管理员邮箱" className="pl-10" value={email} onChange={e => setEmail(e.target.value)} required />
              </div>
              <div className="relative">
                <Lock className="absolute left-3 top-3.5 w-5 h-5 opacity-30" />
-               <Input type="password" placeholder="密码" className="pl-10" value={password} onChange={e => setPassword(e.target.value)} required />
+               <Input type="password" placeholder="访问密码" className="pl-10" value={password} onChange={e => setPassword(e.target.value)} required />
              </div>
 
              {error && (
-               <div className="text-xs p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600 flex gap-2">
-                 <Info size={14} className="shrink-0" /> {error}
+               <div className="text-xs p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600 flex flex-col gap-2">
+                 <div className="flex gap-2 items-center font-bold">
+                   <AlertTriangle size={14} /> 登录受阻
+                 </div>
+                 <p>{error}</p>
                </div>
              )}
 
              <Button type="submit" className="w-full h-12" isLoading={loading}>安全进入</Button>
+             
+             <div className="mt-4 p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
+                <p className="text-[10px] text-blue-600 leading-relaxed">
+                  <strong>初始配置提示：</strong><br/>
+                  1. 请在 Supabase 控制台手动创建一个用户。<br/>
+                  2. 建议账号: <code>admin@prism.com</code><br/>
+                  3. 建议密码: <code>ss631204</code><br/>
+                  4. 运行角色提升 SQL 将其设为 Lvl.00。
+                </p>
+             </div>
+
              <div className="relative flex items-center py-2">
                 <div className="flex-grow border-t border-black/5"></div>
                 <span className="flex-shrink mx-4 text-[10px] opacity-30 uppercase font-bold">或者</span>
                 <div className="flex-grow border-t border-black/5"></div>
              </div>
              <Button type="button" variant="ghost" className="w-full" onClick={enterDemoMode}>
-               以离线模式进入 (演示模式)
+               以离线模式进入 (免登录预览)
              </Button>
           </form>
         ) : (
