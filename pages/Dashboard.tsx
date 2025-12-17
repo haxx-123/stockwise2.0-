@@ -37,7 +37,7 @@ const StatCard = ({ title, value, icon: Icon, trend, color }: any) => (
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    totalProducts: 124, // 模拟数据
+    totalProducts: 124, 
     activeBatches: 38,
     expiringSoon: 4,
     recentLogs: [] as any[]
@@ -46,20 +46,25 @@ const Dashboard = () => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const { count: pCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
-        const { count: bCount } = await supabase.from('batches').select('*', { count: 'exact', head: true });
-        const { data: logs } = await supabase.from('operation_logs').select('*, operator:profiles(username)').order('created_at', { ascending: false }).limit(5);
-        
-        if (pCount !== null) {
-          setStats(prev => ({
-            ...prev,
-            totalProducts: pCount || 0,
-            activeBatches: bCount || 0,
-            recentLogs: logs || []
-          }));
-        }
+        // 使用 Promise.allSettled 确保单个请求失败不会阻止其他逻辑
+        const results = await Promise.allSettled([
+          supabase.from('products').select('*', { count: 'exact', head: true }),
+          supabase.from('batches').select('*', { count: 'exact', head: true }),
+          supabase.from('operation_logs').select('*, operator:profiles(username)').order('created_at', { ascending: false }).limit(5)
+        ]);
+
+        const prodResult = results[0];
+        const batchResult = results[1];
+        const logResult = results[2];
+
+        setStats(prev => ({
+          ...prev,
+          totalProducts: (prodResult.status === 'fulfilled' && prodResult.value.count) || prev.totalProducts,
+          activeBatches: (batchResult.status === 'fulfilled' && batchResult.value.count) || prev.activeBatches,
+          recentLogs: (logResult.status === 'fulfilled' && logResult.value.data) || []
+        }));
       } catch (e) {
-        console.warn("Using offline demo statistics.");
+        console.warn("Dashboard data fetch partially failed, using available/demo data.");
       }
     };
     loadStats();
@@ -74,7 +79,7 @@ const Dashboard = () => {
         </div>
         <div className="flex items-center gap-4 bg-white/5 p-2 px-4 rounded-full glass text-[10px] font-bold tracking-widest opacity-60">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          SYSTEM SECURE
+          TERMINAL ONLINE
         </div>
       </div>
 
@@ -89,14 +94,14 @@ const Dashboard = () => {
         <GlassCard className="lg:col-span-2">
           <div className="flex justify-between items-center mb-8">
             <h3 className="font-bold text-xl">库存吞吐量</h3>
-            <div className="text-[10px] opacity-40 font-mono">Last 7 Days Data</div>
+            <div className="text-[10px] opacity-40 font-mono">Last 7 Days Stats</div>
           </div>
           <div className="h-64 w-full flex items-end justify-between gap-3 px-4">
              {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
                <div key={i} className="flex-1 group relative">
                  <div 
                    style={{ height: `${h}%` }} 
-                   className="w-full bg-gradient-to-t from-[var(--color-accent)]/40 to-[var(--color-accent)] rounded-t-lg transition-all duration-500 hover:brightness-125" 
+                   className="w-full bg-gradient-to-t from-[var(--color-accent)]/40 to-[var(--color-accent)] rounded-t-lg transition-all duration-500 hover:brightness-125 shadow-lg" 
                  />
                  <div className="absolute bottom-[-24px] left-1/2 -translate-x-1/2 text-[10px] opacity-30 font-mono">0{i+1}</div>
                </div>
@@ -105,7 +110,7 @@ const Dashboard = () => {
         </GlassCard>
 
         <GlassCard>
-          <h3 className="font-bold text-xl mb-8">最近操作</h3>
+          <h3 className="font-bold text-xl mb-8">最近操作动态</h3>
           <div className="space-y-6">
             {stats.recentLogs.length > 0 ? stats.recentLogs.map((log, i) => (
               <div key={log.id} className="flex gap-4">

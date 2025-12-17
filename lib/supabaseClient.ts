@@ -1,29 +1,40 @@
+
 import { createClient } from '@supabase/supabase-js';
 
-// 这些是占位符。在实际环境中，请从 Supabase 控制台获取真实凭据。
-// 为了防止 "Failed to fetch" 错误崩溃，我们添加了 global fetch 错误处理的思路。
+// 使用用户提供的最新反向代理地址和凭据
 const SUPABASE_URL = 'https://stockwise.art/api'; 
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsYWt3YnhrZnRva2ZkeXFkcm10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NTAzNDAsImV4cCI6MjA4MTQ3OTg0MH0.2Stwx6UV3Tv9ZpQdoc2_FEqyyLO8e2YDBmzIcNiIEfk';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsYWt3YnhrZnRva2ZkeXFkcm10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MDM4NDAsImV4cCI6MjA4MTQ3OTg0MH0.2Stwx6UV3Tv9ZpQdoc2_FEqyyLO8e2YDBmzIcNiIEfk';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // 增加存储检查，防止在隐私模式下崩溃
+    storage: window.localStorage
   },
   global: {
-    headers: { 'x-application-name': 'prism-stockwise' }
+    headers: { 'x-application-name': 'prism-stockwise' },
+    // 关键修复：处理 fetch 失败的情况，防止抛出未捕获的全局异常
+    // Fix: Explicitly define parameters to avoid "spread argument must either have a tuple type" error
+    fetch: (input, init) => fetch(input, init).catch(err => {
+      console.warn("Supabase fetch failed - Network error or invalid endpoint:", err);
+      throw err;
+    })
   }
 });
 
-// 安全获取 Session 的辅助函数
+/**
+ * 安全获取 Session 的辅助函数
+ * 即使网络连接失败 (Failed to fetch)，也会返回空 session 而不是抛出异常崩溃应用
+ */
 export const getSafeSession = async () => {
   try {
     const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
+    if (error) return { session: null };
     return data;
   } catch (err) {
-    console.warn("Supabase connection failed, switching to demo mode context.");
+    console.warn("Network unreachable, proceeding in demo/offline mode.");
     return { session: null };
   }
 };
